@@ -1,20 +1,16 @@
 {
   "short_name": "Tracking",
-  "name": "Tracking OBD2",
-  "description": "Monitor de ruta y consumo real para el coche.",
+  "name": "Tracking - Telemetría OBD2",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
       "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
+      "sizes": "512x512"
     }
-  ],
-  "start_url": "./index.html",
-  "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#0f172a",
-  "theme_color": "#2563eb",
-  "scope": "/",
-  "lang": "es-ES"
+  ]
 }
