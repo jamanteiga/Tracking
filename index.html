@@ -2,46 +2,86 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tracking</title>
-    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Tracking">
-    
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-        tailwind.config = {
-            darkMode: 'class', // Habilita el modo oscuro por clase
-        }
+        tailwind.config = { darkMode: 'class' }
     </script>
-    
     <style>
         .dashboard-val { font-family: 'Courier New', monospace; font-weight: bold; }
-        .transition-all { transition: all 0.3s ease; }
-        /* Evita el scroll elástico en iOS */
-        body { overscroll-behavior-y: contain; }
+        .hidden { display: none !important; }
     </style>
 </head>
-<body id="bodyApp" class="bg-white text-slate-900 transition-all duration-500 min-h-screen">
+<body id="bodyApp" class="bg-white text-slate-900 transition-colors duration-300 min-h-screen">
 
-    <header class="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700 dark:bg-slate-900">
-        <h1 class="font-bold text-xl tracking-tight dark:text-white">Tracking</h1>
-        <button onclick="toggleModo()" id="btnModo" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-xl shadow-sm">
-            🌙
-        </button>
+    <header class="p-4 flex justify-between items-center border-b dark:bg-slate-900 dark:border-slate-700">
+        <h1 class="font-bold text-xl dark:text-white">Tracking</h1>
+        <button onclick="toggleModo()" id="btnModo" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">🌙</button>
     </header>
 
-    <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-6">
-        <div class="space-y-4">
-            <div>
-                <label class="block text-xs uppercase font-bold text-slate-500 mb-1 ml-1">Origen</label>
-                <input type="text" id="origen" 
-                    class="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" 
-                    placeholder="Ej: Carballal 12, Abegondo">
+    <div id="pantalla1" class="p-6 max-w-md mx-auto block">
+        <div class="space-y-6">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Origen</label>
+                    <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border rounded-xl shadow-sm" placeholder="Ej: Carballal 12, Abegondo">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Destino</label>
+                    <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border rounded-xl shadow-sm" placeholder="Ej: Carballal 20, Abegondo">
+                </div>
             </div>
-            <div>
-                <label class="block text-xs uppercase font-bold text-slate-500 mb-1 ml-1">Destino</label>
-                <input type="text" id="destino" 
-                    class="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl dark:text-white focus:ring-2 focus:ring-blue-500 outline
+
+            <div class="p-4 bg-blue-50 dark:bg-slate-800 rounded-2xl border border-blue-100 dark:border-slate-700 text-center">
+                <label class="block text-sm font-bold text-blue-600 dark:text-blue-400 mb-1">Precio Gasolina (€/Litro)</label>
+                <input type="number" id="precioLitro" step="0.001" class="w-full bg-transparent text-2xl font-mono text-center dark:text-white outline-none" value="1.488">
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-2xl font-bold flex justify-between items-center active:bg-slate-700">
+                    <span>1. CONECTAR VLINKER</span>
+                    <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
+                </button>
+                
+                <button onclick="iniciarRuta()" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-lg shadow-lg active:bg-blue-500">
+                    2. TRAZAR RUTA Y SALIR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="pantalla2" class="hidden p-4 max-w-md mx-auto space-y-4">
+        <div class="flex justify-between items-center">
+            <span id="statusConexion" class="text-[10px] bg-red-500 text-white px-3 py-1 rounded-full font-bold">SIN DATOS</span>
+            <button onclick="volverAjustes()" class="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">✕ Cancelar</button>
+        </div>
+
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl p-6 text-center border-2 border-dashed dark:border-slate-700">
+            <p id="indicadorRuta" class="font-bold text-lg dark:text-white"></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 dark:bg-slate-800 p-5 rounded-3xl border dark:border-slate-700">
+                <p class="text-[10px] uppercase font-bold opacity-50 dark:text-white">Velocidad</p>
+                <p class="text-4xl dashboard-val dark:text-white"><span id="valVelocidad">0</span> <small class="text-xs">km/h</small></p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-800 p-5 rounded-3xl border dark:border-slate-700">
+                <p class="text-[10px] uppercase font-bold opacity-50 dark:text-white">Llegada</p>
+                <p id="valLlegada" class="text-4xl dashboard-val text-blue-600 dark:text-blue-400">--:--</p>
+            </div>
+            <div class="col-span-2 bg-slate-900 dark:bg-blue-900 p-6 rounded-[2rem] text-white">
+                <p class="text-xs uppercase font-bold opacity-70">Gasto Total</p>
+                <div class="flex justify-between items-baseline">
+                    <p class="text-6xl dashboard-val"><span id="valCoste">0.00</span>€</p>
+                    <p class="text-sm font-bold opacity-60"><span id="valLitros">0.000</span> L</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
