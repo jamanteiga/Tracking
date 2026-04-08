@@ -10,60 +10,60 @@
     <script>
         tailwind.config = { darkMode: 'class' }
     </script>
-    <style>
-        .dashboard-val { font-family: 'Courier New', monospace; font-weight: bold; }
-        .hidden { display: none !important; }
-    </style>
 </head>
-<body id="bodyApp" class="bg-white text-slate-900 transition-colors duration-300 min-h-screen">
-    <header class="p-4 flex justify-between items-center border-b dark:bg-slate-900 dark:border-slate-700">
-        <h1 class="font-bold text-xl dark:text-white">Tracking</h1>
-        <button onclick="toggleModo()" id="btnModo" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">🌙</button>
+<body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors duration-300 min-h-screen">
+    
+    <header class="p-4 flex justify-between items-center border-b dark:border-slate-700">
+        <h1 class="font-bold text-xl">Tracking</h1>
+        <button onclick="toggleModo()" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full" id="btnModo">🌙</button>
     </header>
 
-    <div id="pantalla1" class="p-6 max-w-md mx-auto block">
-        <div class="space-y-4">
-            <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border rounded-xl" placeholder="Origen">
-            <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white border rounded-xl" placeholder="Destino">
-            <input type="number" id="precioLitro" step="0.001" class="w-full p-4 bg-blue-50 dark:bg-slate-800 dark:text-white border rounded-xl text-center font-bold" value="1.488">
-            
-            <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold flex justify-between items-center">
-                <span>CONECTAR VLINKER</span>
-                <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
-            </button>
-            
-            <button onclick="iniciarRuta()" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black text-lg">
-                TRAZAR RUTA Y SALIR
-            </button>
-        </div>
+    <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-4">
+        <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen">
+        <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino">
+        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 bg-blue-50 dark:bg-slate-800 border rounded-xl text-center font-bold" value="1.488">
+        
+        <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold flex justify-between items-center">
+            <span>CONECTAR VLINKER</span>
+            <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
+        </button>
+        
+        <button onclick="iniciarRuta()" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black text-lg shadow-lg">
+            TRAZAR RUTA Y SALIR
+        </button>
+
+        <div id="listaHistorial" class="pt-4 space-y-2 text-xs opacity-70"></div>
     </div>
 
     <div id="pantalla2" class="hidden p-4 max-w-md mx-auto space-y-4">
         <div class="flex justify-between items-center">
-            <span id="statusConexion" class="text-[10px] bg-red-500 text-white px-3 py-1 rounded-full font-bold uppercase">OBD OFF</span>
-            <button onclick="volverAjustes()" class="text-xs font-bold text-blue-600">✕ CANCELAR</button>
+            <div id="modoACT" class="text-[10px] bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-full font-bold opacity-30">MODO 2 CILINDROS</div>
+            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 uppercase p-2">✕ Finalizar</button>
         </div>
-        <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl p-6 text-center border-2 border-dashed dark:border-slate-700">
-            <p id="indicadorRuta" class="font-bold text-lg dark:text-white uppercase"></p>
+
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl p-6 text-center border dark:border-slate-700">
+            <p id="indicadorRuta" class="font-bold text-sm uppercase"></p>
         </div>
+
         <div class="grid grid-cols-2 gap-4">
             <div class="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border dark:border-slate-700">
-                <p class="text-[10px] uppercase font-bold opacity-50 dark:text-white">Velocidad</p>
-                <p class="text-4xl dashboard-val dark:text-white"><span id="valVelocidad">0</span></p>
+                <p class="text-[10px] uppercase font-bold opacity-50">Velocidad</p>
+                <p class="text-4xl font-mono"><span id="valVelocidad">0</span></p>
             </div>
             <div class="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border dark:border-slate-700">
-                <p class="text-[10px] uppercase font-bold opacity-50 dark:text-white">Llegada</p>
-                <p id="valLlegada" class="text-4xl dashboard-val text-blue-600">--:--</p>
+                <p class="text-[10px] uppercase font-bold opacity-50">Llegada</p>
+                <p id="valLlegada" class="text-4xl font-mono text-blue-600">--:--</p>
             </div>
-            <div class="col-span-2 bg-slate-900 p-6 rounded-[2rem] text-white">
-                <p class="text-xs uppercase font-bold opacity-70">Gasto</p>
+            <div class="col-span-2 bg-slate-900 p-6 rounded-[2rem] text-white shadow-xl">
+                <p class="text-xs uppercase font-bold opacity-70 mb-2">Gasto de Viaje</p>
                 <div class="flex justify-between items-baseline">
-                    <p class="text-5xl dashboard-val"><span id="valCoste">0.00</span>€</p>
+                    <p class="text-6xl font-mono"><span id="valCoste">0.00</span>€</p>
                     <p class="text-sm opacity-60"><span id="valLitros">0.0000</span> L</p>
                 </div>
             </div>
         </div>
     </div>
+
     <script src="app.js"></script>
 </body>
 </html>

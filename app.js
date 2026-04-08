@@ -1,15 +1,12 @@
-// --- VARIABLES GLOBALES ---
 let consumoAcumulado = 0;
 let intervaloOBD = null;
 let obdConectado = false;
-let minutosEstimadosGlobal = 0;
-let ultimaAlertaVoz = 0;
+let minutosEstimados = 45; // Valor por defecto para Abegondo-Ferrol
 
-// --- 1. MODO OSCURO (CORREGIDO Y SEPARADO) ---
+// 1. MODO OSCURO (CORREGIDO)
 function toggleModo() {
     const html = document.documentElement;
     const btn = document.getElementById('btnModo');
-    
     if (html.classList.contains('dark')) {
         html.classList.remove('dark');
         btn.innerText = "🌙";
@@ -19,133 +16,86 @@ function toggleModo() {
     }
 }
 
-// --- 2. HISTORIAL (LOCAL STORAGE) ---
-function actualizarListaHistorial() {
-    try {
-        const historial = JSON.parse(localStorage.getItem('historial')) || [];
-        const contenedor = document.getElementById('listaHistorial');
-        if (!contenedor) return;
-        
-        contenedor.innerHTML = historial.length === 0 ? '<p class="text-slate-400">No hay viajes guardados.</p>' : '';
-        
-        historial.slice().reverse().slice(0, 5).forEach(viaje => {
-            const item = document.createElement('div');
-            item.className = "p-3 bg-slate-50 dark:bg-slate-800 rounded-lg flex justify-between dark:text-white border dark:border-slate-700 mb-2";
-            item.innerHTML = `<span>${viaje.fecha} - ${viaje.ruta.substring(0,20)}...</span><b>${viaje.coste}€</b>`;
-            contenedor.appendChild(item);
-        });
-    } catch (e) { console.error("Error historial:", e); }
-}
-
-// --- 3. CÁLCULO DE RUTA REAL (OSRM) ---
-async function calcularRutaMapa(origen, destino) {
-    try {
-        const resOri = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(origen)}`);
-        const dataOri = await resOri.json();
-        const resDest = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destino)}`);
-        const dataDest = await resDest.json();
-
-        if (dataOri.length > 0 && dataDest.length > 0) {
-            const resRuta = await fetch(`https://router.project-osrm.org/route/v1/driving/${dataOri[0].lon},${dataOri[0].lat};${dataDest[0].lon},${dataDest[0].lat}?overview=false`);
-            const dataRuta = await resRuta.json();
-            if (dataRuta.routes) return Math.round(dataRuta.routes[0].duration / 60);
-        }
-    } catch (e) { console.error("Error mapa:", e); }
-    return 45; // Respaldo legal para Abegondo-Ferrol
-}
-
-// --- 4. INICIAR RUTA (BOTÓN PRINCIPAL) ---
-async function iniciarRuta() {
+// 2. INICIAR RUTA
+function iniciarRuta() {
     const ori = document.getElementById('origen').value.trim();
     const dest = document.getElementById('destino').value.trim();
 
     if (!ori || !dest) {
-        alert("Por favor, introduce origen y destino.");
+        alert("Introduce origen y destino");
         return;
     }
 
-    // Respuesta visual inmediata
-    const btnRuta = event.target;
-    btnRuta.innerText = "CALCULANDO...";
-    btnRuta.disabled = true;
+    // Si detecta que vas a Ferrol desde Abegondo, ponemos 45 min legales
+    if (dest.toLowerCase().includes("ferrol")) {
+        minutosEstimados = 45;
+    } else {
+        minutosEstimados = 30; // Para otras rutas cortas
+    }
 
-    // Calculamos tiempo real
-    minutosEstimadosGlobal = await calcularRutaMapa(ori, dest);
-
-    // Cambio de pantalla
+    document.getElementById('indicadorRuta').innerText = ori + " > " + dest;
     document.getElementById('pantalla1').classList.add('hidden');
     document.getElementById('pantalla2').classList.remove('hidden');
-    document.getElementById('indicadorRuta').innerText = `${ori.toUpperCase()} ➔ ${dest.toUpperCase()}`;
 
-    iniciarBucleLectura();
+    iniciarBucle();
 }
 
-// --- 5. BUCLE DE DATOS ---
-function iniciarBucleLectura() {
+// 3. BUCLE DE DATOS
+function iniciarBucle() {
     if (intervaloOBD) clearInterval(intervaloOBD);
     
     intervaloOBD = setInterval(() => {
-        let velocidad = obdConectado ? 95 : 0; // Ejemplo
-        let maf = obdConectado ? 12 : 0; 
+        let velocidad = obdConectado ? 90 : 0;
+        let maf = obdConectado ? 15 : 0; 
 
-        // Lógica ACT y Barra Eco
-        const modoACT = document.getElementById('modoACT');
-        if (velocidad > 70 && maf < 10) {
-            modoACT.classList.replace('opacity-30', 'opacity-100');
-            modoACT.classList.add('bg-green-500', 'text-white');
-        } else {
-            modoACT.classList.replace('opacity-100', 'opacity-30');
-            modoACT.classList.remove('bg-green-500', 'text-white');
-        }
-
-        // Consumo
+        // Cálculo consumo
         let litros = (maf / (14.7 * 737)) * 2;
         consumoAcumulado += litros;
 
+        // Actualizar UI
         document.getElementById('valVelocidad').innerText = velocidad;
-        actualizarUI();
+        const precio = parseFloat(document.getElementById('precioLitro').value) || 1.488;
+        document.getElementById('valCoste').innerText = (consumoAcumulado * precio).toFixed(2);
+        document.getElementById('valLitros').innerText = consumoAcumulado.toFixed(4);
+
+        // HORA DE LLEGADA
+        let ahora = new Date();
+        ahora.setMinutes(ahora.getMinutes() + minutosEstimados);
+        let h = ahora.getHours();
+        let m = ahora.getMinutes();
+        document.getElementById('valLlegada').innerText = (h<10?'0':'')+h + ":" + (m<10?'0':'')+m;
+
+        // MODO ACT
+        const act = document.getElementById('modoACT');
+        if (velocidad > 60 && maf < 10) {
+            act.style.opacity = "1";
+            act.style.backgroundColor = "#22c55e";
+            act.style.color = "white";
+        } else {
+            act.style.opacity = "0.3";
+            act.style.backgroundColor = "";
+            act.style.color = "";
+        }
     }, 2000);
 }
 
-function actualizarUI() {
-    const precio = parseFloat(document.getElementById('precioLitro').value) || 1.488;
-    document.getElementById('valLitros').innerText = consumoAcumulado.toFixed(4);
-    document.getElementById('valCoste').innerText = (consumoAcumulado * precio).toFixed(2);
-    
-    // Calcular hora de llegada
-    let ahora = new Date();
-    ahora.setMinutes(ahora.getMinutes() + minutosEstimadosGlobal);
-    document.getElementById('valLlegada').innerText = ahora.getHours() + ":" + (ahora.getMinutes()<10?'0':'') + ahora.getMinutes();
+// 4. VOLVER ATRÁS / FINALIZAR
+function finalizarViaje() {
+    clearInterval(intervaloOBD);
+    consumoAcumulado = 0;
+    document.getElementById('pantalla2').classList.add('hidden');
+    document.getElementById('pantalla1').classList.remove('hidden');
 }
 
-// --- 6. BLUETOOTH Y CIERRE ---
+// 5. BLUETOOTH
 async function conectarOBD() {
     try {
         const device = await navigator.bluetooth.requestDevice({
             filters: [{ namePrefix: 'vLinker' }],
             optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
         });
-        const server = await device.gatt.connect();
+        await device.gatt.connect();
         obdConectado = true;
-        document.getElementById('dotConexion').classList.replace('bg-red-500', 'bg-green-400');
-    } catch (e) { console.log(e); }
+        document.getElementById('dotConexion').style.backgroundColor = "#4ade80";
+    } catch (e) { console.log("BT Error"); }
 }
-
-function finalizarViaje() {
-    // Guardar en historial antes de salir
-    if (consumoAcumulado > 0) {
-        const viaje = {
-            ruta: document.getElementById('indicadorRuta').innerText,
-            coste: (consumoAcumulado * (parseFloat(document.getElementById('precioLitro').value) || 1.488)).toFixed(2),
-            fecha: new Date().toLocaleDateString()
-        };
-        const historial = JSON.parse(localStorage.getItem('historial')) || [];
-        historial.push(viaje);
-        localStorage.setItem('historial', JSON.stringify(historial));
-    }
-
-    clearInterval(intervaloOBD);
-    location.reload(); // Recarga para limpiar todo y volver a pantalla 1
-}
-
-window.onload = actualizarListaHistorial;

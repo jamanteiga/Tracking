@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tracking-v4'; // Versión actualizada
+const CACHE_NAME = 'tracking-v10';
 const assets = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const assets = [
   './manifest.json'
 ];
 
+// Instalación: Guardar archivos en caché
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
@@ -14,21 +15,20 @@ self.addEventListener('install', event => {
   );
 });
 
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
+// Activación: Borrar cachés antiguas para que los cambios surtan efecto
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => {
+      return Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
     })
   );
 });
 
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
-                  .map(name => caches.delete(name))
-      );
-    })
+// Estrategia: Intentar red, si falla usar caché
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
