@@ -2,52 +2,46 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tracking</title>
+    
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Tracking">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class', // Habilita el modo oscuro por clase
+        }
+    </script>
+    
     <style>
-        .dashboard-val { font-family: 'Courier New', monospace; }
+        .dashboard-val { font-family: 'Courier New', monospace; font-weight: bold; }
         .transition-all { transition: all 0.3s ease; }
+        /* Evita el scroll elástico en iOS */
+        body { overscroll-behavior-y: contain; }
     </style>
 </head>
-<body id="bodyApp" class="bg-white text-slate-900 transition-all duration-500">
+<body id="bodyApp" class="bg-white text-slate-900 transition-all duration-500 min-h-screen">
 
-    <header class="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700">
-        <h1 class="font-bold text-lg">Tracking</h1>
-        <button onclick="toggleModo()" id="btnModo" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-xl">🌙</button>
+    <header class="p-4 flex justify-between items-center border-b border-slate-200 dark:border-slate-700 dark:bg-slate-900">
+        <h1 class="font-bold text-xl tracking-tight dark:text-white">Tracking</h1>
+        <button onclick="toggleModo()" id="btnModo" class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-xl shadow-sm">
+            🌙
+        </button>
     </header>
 
-    <div id="pantalla1" class="p-6 max-w-md mx-auto">
+    <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-6">
         <div class="space-y-4">
-            <div class="space-y-3">
-                <input type="text" id="origen" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-lg" placeholder="Origen: Calle, Parroquia, Ayuntamiento">
-                <input type="text" id="destino" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border rounded-lg" placeholder="Destino: Calle, Ayuntamiento">
+            <div>
+                <label class="block text-xs uppercase font-bold text-slate-500 mb-1 ml-1">Origen</label>
+                <input type="text" id="origen" 
+                    class="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl dark:text-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                    placeholder="Ej: Carballal 12, Abegondo">
             </div>
-
-            <div class="pt-2">
-                <label class="block text-xs font-bold text-blue-600 mb-1">Precio Gasolina (€/L)</label>
-                <input type="number" id="precioLitro" step="0.001" class="w-full p-3 bg-blue-50 dark:bg-slate-800 border border-blue-100 rounded-lg font-bold" value="1.650">
-            </div>
-
-            <div class="grid grid-cols-1 gap-3 pt-4">
-                <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-700 text-white p-4 rounded-xl font-bold flex justify-between items-center">
-                    <span>1. CONECTAR VLINKER</span>
-                    <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
-                </button>
-                
-                <button onclick="iniciarRuta()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold text-lg shadow-lg shadow-blue-200 dark:shadow-none">
-                    2. TRAZAR RUTA Y SALIR
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="pantalla2" class="hidden flex flex-col h-[calc(100vh-80px)] p-4">
-        </div>
-
-    <script src="app.js"></script>
-</body>
-</html>
+            <div>
+                <label class="block text-xs uppercase font-bold text-slate-500 mb-1 ml-1">Destino</label>
+                <input type="text" id="destino" 
+                    class="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl dark:text-white focus:ring-2 focus:ring-blue-500 outline
