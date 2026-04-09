@@ -3,33 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tracking Pro + REC</title>
+    <title>Octavia Telemetry v18</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        #map { height: 200px; width: 100%; z-index: 1; background: #cbd5e1; border-radius: 1rem; }
+        /* CRÍTICO: Altura fija para que el mapa no salga vacío */
+        #map { height: 250px; width: 100%; display: block; background-color: #e5e7eb; border-radius: 1rem; z-index: 1; }
         .hidden { display: none !important; }
         .dashboard-val { font-family: monospace; font-weight: bold; }
-        @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        .animate-rec { animation: pulse-red 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .animate-rec { animation: pulse 1s infinite; }
     </style>
 </head>
 <body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-screen transition-colors">
     
     <header class="p-4 flex justify-between items-center border-b dark:border-slate-700">
-        <h1 class="font-black text-xl tracking-tighter">OCTAVIA TELEMETRY</h1>
+        <h1 class="font-black text-xl tracking-tighter">OCTAVIA PRO</h1>
         <button onclick="toggleModo()" id="btnModo" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">🌙</button>
     </header>
 
     <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-4">
-        <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen">
-        <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino">
-        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 border rounded-xl dark:bg-slate-800 font-bold" value="1.488">
+        <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen (ej: Abegondo)">
+        <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino (ej: Ferrol)">
+        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 border rounded-xl dark:bg-slate-800 font-bold text-center" value="1.488">
         
-        <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold flex justify-between items-center">
-            <span>VLINKER OBD2</span>
+        <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold flex justify-between items-center active:scale-95">
+            <span>CONECTAR VLINKER</span>
             <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
         </button>
         
@@ -50,18 +51,18 @@
         <div class="grid grid-cols-2 gap-4">
             <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 text-center">
                 <p class="text-[10px] font-bold opacity-50 uppercase">Llegada Est.</p>
-                <p id="valLlegada" class="text-3xl dashboard-val text-blue-600">--:--</p>
+                <p id="valLlegada" class="text-2xl dashboard-val text-blue-600">--:--</p>
             </div>
             <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 text-center">
-                <p class="text-[10px] font-bold opacity-50 uppercase">Vel. Real</p>
-                <p class="text-3xl dashboard-val"><span id="valVelocidad">0</span></p>
+                <p class="text-[10px] font-bold opacity-50 uppercase">Altitud</p>
+                <p id="valAltitud" class="text-2xl dashboard-val">0 <span class="text-xs">m</span></p>
             </div>
-            <div class="col-span-2 bg-slate-900 p-5 rounded-[2rem] text-white flex justify-between items-center">
+            <div class="col-span-2 bg-slate-900 p-5 rounded-[2rem] text-white flex justify-between items-center shadow-2xl">
                 <div>
-                    <p class="text-[10px] opacity-50 uppercase font-bold">Consumo Inst.</p>
-                    <p class="text-3xl dashboard-val"><span id="valConsumo">0.0</span> <span class="text-sm">L/100</span></p>
+                    <p class="text-[10px] opacity-50 uppercase font-bold">Velocidad Km/h</p>
+                    <p id="valVelocidad" class="text-5xl dashboard-val">0</p>
                 </div>
-                <button onclick="finalizarViaje()" class="bg-white/10 p-4 rounded-full text-red-500 font-bold">✕</button>
+                <button onclick="finalizarViaje()" class="bg-white/10 p-4 rounded-full text-red-500 font-bold">SALIR</button>
             </div>
         </div>
     </div>
