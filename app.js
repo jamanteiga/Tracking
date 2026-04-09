@@ -1,25 +1,38 @@
 let mapa = null;
+let obdConectado = false;
 
 function toggleModo() {
     document.documentElement.classList.toggle('dark');
-    // Al cambiar de modo, si el mapa existe, lo refrescamos
-    if (mapa) {
-        finalizarViaje();
-        alert("Modo cambiado, traza la ruta de nuevo.");
+    const btn = document.getElementById('btnModo');
+    btn.innerText = document.documentElement.classList.contains('dark') ? "☀️" : "🌙";
+}
+
+async function conectarOBD() {
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ namePrefix: 'vLinker' }],
+            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+        });
+        await device.gatt.connect();
+        obdConectado = true;
+        document.getElementById('dotConexion').classList.replace('bg-red-500', 'bg-green-400');
+        document.getElementById('labelStatus').innerText = "OBD Conectado";
+        document.getElementById('labelStatus').classList.replace('bg-slate-200', 'bg-green-600');
+        document.getElementById('labelStatus').classList.add('text-white');
+    } catch (e) {
+        alert("Bluetooth: " + e.message);
     }
 }
 
 async function iniciarRuta() {
     const ori = document.getElementById('origen').value.trim();
     const dest = document.getElementById('destino').value.trim();
-    if (!ori || !dest) return alert("Falta origen o destino");
+    if (!ori || !dest) return alert("Indica Origen y Destino");
 
     const btn = document.getElementById('btnTrazar');
-    btn.innerText = "BUSCANDO RUTA...";
-    btn.disabled = true;
+    btn.innerText = "CALCULANDO...";
 
     try {
-        // 1. Obtener coordenadas
         const geo = async (l) => {
             const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(l)}`);
             const d = await r.json();
@@ -28,25 +41,16 @@ async function iniciarRuta() {
         const oData = await geo(ori);
         const dData = await geo(dest);
 
-        if(!oData || !dData) throw new Error("Localización no encontrada");
-
-        // 2. Obtener ruta
         const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${oData.lon},${oData.lat};${dData.lon},${dData.lat}?overview=full&geometries=geojson`);
         const data = await r.json();
 
-        // 3. Cambiar Pantalla
         document.getElementById('pantalla1').classList.add('hidden');
         document.getElementById('pantalla2').classList.remove('hidden');
+        document.getElementById('indicadorRuta').innerText = ori + " > " + dest;
 
-        // 4. INICIALIZAR MAPA (Con triple seguridad)
         setTimeout(() => {
             if (mapa) { mapa.remove(); mapa = null; }
-            
-            // Creamos el mapa apuntando al div 'map'
-            mapa = L.map('map', {
-                zoomControl: false,
-                attributionControl: false
-            }).setView([oData.lat, oData.lon], 13);
+            mapa = L.map('map', { zoomControl: false }).setView([oData.lat, oData.lon], 13);
             
             const isDark = document.documentElement.classList.contains('dark');
             const tiles = isDark 
@@ -54,37 +58,25 @@ async function iniciarRuta() {
                 : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
             L.tileLayer(tiles).addTo(mapa);
-
             const coords = data.routes[0].geometry.coordinates.map(p => [p[1], p[0]]);
-            const polyline = L.polyline(coords, { color: '#2563eb', weight: 6, opacity: 0.8 }).addTo(mapa);
-            
-            // Ajustar vista
-            mapa.fitBounds(polyline.getBounds(), { padding: [30, 30] });
-
-            // Forzar renderizado
+            const polyline = L.polyline(coords, { color: '#2563eb', weight: 6 }).addTo(mapa);
+            mapa.fitBounds(polyline.getBounds(), { padding: [20, 20] });
             mapa.invalidateSize();
 
-            // Tiempo de llegada
             let llegada = new Date();
             llegada.setMinutes(llegada.getMinutes() + Math.round(data.routes[0].duration / 60));
             document.getElementById('valLlegada').innerText = llegada.getHours() + ":" + (llegada.getMinutes()<10?'0':'') + llegada.getMinutes();
-            
             btn.innerText = "TRAZAR RUTA";
-            btn.disabled = false;
         }, 400);
 
     } catch (e) {
-        alert("Error: " + e.message);
+        alert("Error de ruta");
         btn.innerText = "TRAZAR RUTA";
-        btn.disabled = false;
     }
 }
 
 function finalizarViaje() {
-    if (mapa) {
-        mapa.remove();
-        mapa = null;
-    }
     document.getElementById('pantalla2').classList.add('hidden');
     document.getElementById('pantalla1').classList.remove('hidden');
+    if(mapa) { mapa.remove(); mapa = null; }
 }

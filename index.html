@@ -9,42 +9,59 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        #map { height: 250px; width: 100%; z-index: 10; background: #eee; }
+        #map { height: 200px; width: 100%; z-index: 1; background: #cbd5e1; }
         .hidden { display: none !important; }
+        .dashboard-val { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     </style>
 </head>
-<body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-screen">
+<body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white min-h-screen transition-colors">
     
     <header class="p-4 flex justify-between items-center border-b dark:border-slate-700">
-        <h1 class="font-bold text-xl">Tracking</h1>
+        <h1 class="font-bold text-xl uppercase tracking-tighter">Tracking</h1>
         <button onclick="toggleModo()" id="btnModo" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">🌙</button>
     </header>
 
     <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-4">
-        <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen">
-        <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino">
-        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 border rounded-xl text-center font-bold" value="1.488">
-        <button onclick="iniciarRuta()" id="btnTrazar" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black">TRAZAR RUTA</button>
+        <div class="space-y-2">
+            <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen (ej: Abegondo)">
+            <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino (ej: Ferrol)">
+        </div>
+
+        <div class="flex gap-2">
+            <input type="number" id="precioLitro" step="0.001" class="w-full p-4 border rounded-xl font-bold dark:bg-slate-800" value="1.488">
+        </div>
+        
+        <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold flex justify-between items-center active:scale-95 transition-transform">
+            <span>CONECTAR VLINKER</span>
+            <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
+        </button>
+        
+        <button onclick="iniciarRuta()" id="btnTrazar" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black text-lg shadow-lg">
+            TRAZAR RUTA
+        </button>
     </div>
 
     <div id="pantalla2" class="hidden p-4 max-w-md mx-auto space-y-4">
         <div class="flex justify-between items-center">
-            <span class="text-xs font-bold uppercase">Trayecto Real</span>
-            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 uppercase">✕ Salir</button>
+            <span id="labelStatus" class="text-[10px] bg-slate-200 dark:bg-slate-700 px-3 py-1 rounded-full font-bold uppercase">OBD Desconectado</span>
+            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 uppercase p-2">✕ Salir</button>
         </div>
 
-        <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl p-4 border dark:border-slate-700">
-            <div id="map" class="rounded-2xl"></div>
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl overflow-hidden border dark:border-slate-700">
+            <div id="map"></div>
+            <div class="p-2 text-center text-[10px] font-bold opacity-50 uppercase bg-slate-200 dark:bg-slate-700">
+                <span id="indicadorRuta">---</span>
+            </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
             <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 text-center">
                 <p class="text-[10px] uppercase font-bold opacity-50">Llegada</p>
-                <p id="valLlegada" class="text-3xl font-mono text-blue-600">--:--</p>
+                <p id="valLlegada" class="text-3xl dashboard-val font-bold text-blue-600">--:--</p>
             </div>
             <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 text-center">
                 <p class="text-[10px] uppercase font-bold opacity-50">Velocidad</p>
-                <p id="valVelocidad" class="text-3xl font-mono">0</p>
+                <p class="text-3xl dashboard-val font-bold"><span id="valVelocidad">0</span></p>
             </div>
         </div>
     </div>
