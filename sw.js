@@ -1,4 +1,4 @@
-const CACHE_NAME = 'octavia-v22';
+const CACHE_NAME = 'octavia-v23';
 const assets = ['./', './index.html', './app.js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
 
 self.addEventListener('install', e => {
