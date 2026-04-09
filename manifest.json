@@ -1,19 +1,15 @@
 {
   "short_name": "Tracking",
-  "name": "Tracking OBD2 - Telemetría",
-  "icons": [
-    {
-      "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
-      "type": "image/png",
-      "sizes": "512x512",
-      "purpose": "any maskable"
-    }
-  ],
+  "name": "Tracking OBD2",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#2563eb",
-  "orientation": "portrait",
-  "description": "Monitorización de consumo y telemetría para Skoda Octavia 1.5 TSI",
-  "lang": "es-ES"
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

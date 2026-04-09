@@ -3,52 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tracking</title>
+    <title>Tracking Pro</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
+    <style>
+        .dashboard-val { font-family: 'Courier New', monospace; }
+        #map { transition: opacity 0.5s; }
+        .hidden { display: none !important; }
+    </style>
 </head>
-<body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors">
+<body class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white transition-colors duration-300 min-h-screen">
     
     <header class="p-4 flex justify-between items-center border-b dark:border-slate-700">
-        <h1 class="font-bold">Tracking</h1>
+        <h1 class="font-bold text-xl">Tracking</h1>
         <button onclick="toggleModo()" id="btnModo" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-full">🌙</button>
     </header>
 
-    <div id="pantalla1" class="p-6 space-y-4">
-        <input type="text" id="origen" class="w-full p-4 border rounded-xl dark:bg-slate-800" placeholder="Origen">
-        <input type="text" id="destino" class="w-full p-4 border rounded-xl dark:bg-slate-800" placeholder="Destino">
-        <input type="number" id="precioLitro" class="w-full p-4 border rounded-xl text-center font-bold dark:bg-slate-800" value="1.488">
+    <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-4">
+        <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen">
+        <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino">
+        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 bg-blue-50 dark:bg-slate-800 border rounded-xl text-center font-bold" value="1.488">
         
         <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-800 text-white p-4 rounded-xl font-bold flex justify-between items-center">
-            <span>CONECTAR</span>
+            <span>VLINKER STATUS</span>
             <span id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full"></span>
         </button>
         
-        <button onclick="iniciarRuta()" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black">
+        <button onclick="iniciarRuta()" id="btnTrazar" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black text-lg shadow-lg">
             TRAZAR RUTA
         </button>
     </div>
 
-    <div id="pantalla2" style="display:none" class="p-4 space-y-4">
+    <div id="pantalla2" class="hidden p-4 max-w-md mx-auto space-y-4">
         <div class="flex justify-between items-center">
-            <span class="text-xs font-bold">OBD ACTIVO</span>
-            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 p-2">✕ FINALIZAR</button>
+            <span class="text-[10px] bg-green-600 text-white px-3 py-1 rounded-full font-bold">MAPA ACTIVO</span>
+            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 uppercase">✕ Finalizar</button>
         </div>
-        <div class="bg-slate-100 dark:bg-slate-800 p-6 rounded-xl border dark:border-slate-700 text-center">
-            <p id="indicadorRuta" class="font-bold uppercase"></p>
+
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl p-4 text-center border dark:border-slate-700">
+            <p id="indicadorRuta" class="font-bold text-xs uppercase opacity-70 mb-2"></p>
+            <div id="map" class="w-full h-48 rounded-2xl border dark:border-slate-700 bg-slate-200"></div>
         </div>
-        <div class="grid grid-cols-2 gap-4 text-center">
-            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700">
-                <p class="text-xs opacity-50">Llegada</p>
-                <p id="valLlegada" class="text-2xl font-bold text-blue-600">--:--</p>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700">
+                <p class="text-[10px] uppercase font-bold opacity-50">Llegada</p>
+                <p id="valLlegada" class="text-3xl dashboard-val text-blue-600">--:--</p>
             </div>
-            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700">
-                <p class="text-xs opacity-50">Velocidad</p>
-                <p class="text-2xl font-bold">0</p>
+            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700">
+                <p class="text-[10px] uppercase font-bold opacity-50">Velocidad</p>
+                <p class="text-3xl dashboard-val">0</p>
+            </div>
+            <div class="col-span-2 bg-slate-900 p-6 rounded-[2rem] text-white">
+                <p class="text-xs uppercase font-bold opacity-70 mb-1">Gasto total</p>
+                <div class="flex justify-between items-baseline">
+                    <p class="text-5xl dashboard-val">0.00€</p>
+                    <p class="text-xs opacity-50">0.0000 L</p>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
