@@ -1,44 +1,74 @@
-// Aseguramos que el script cargue correctamente
-console.log("Script cargado v11");
+// Forzamos versión v12 para evitar caché
+console.log("Cargando Telemetría v12 - Mapa Real");
 
-// 1. MODO OSCURO (Nivel básico)
 function toggleModo() {
     document.documentElement.classList.toggle('dark');
     const btn = document.getElementById('btnModo');
     btn.innerText = document.documentElement.classList.contains('dark') ? "☀️" : "🌙";
 }
 
-// 2. INICIAR RUTA (Sin llamadas a mapas externos para evitar bloqueos)
-function iniciarRuta() {
-    const ori = document.getElementById('origen').value;
-    const dest = document.getElementById('destino').value;
+// Función para obtener coordenadas y tiempo real
+async function obtenerDatosRuta(origen, destino) {
+    try {
+        const geo = async (l) => {
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(l)}`);
+            const d = await r.json();
+            return d[0];
+        };
 
-    if (!ori || !dest) {
-        alert("Falta origen o destino");
+        const o = await geo(origen);
+        const d = await geo(destino);
+
+        if (o && d) {
+            const ruta = await fetch(`https://router.project-osrm.org/route/v1/driving/${o.lon},${o.lat};${d.lon},${d.lat}?overview=false`);
+            const data = await ruta.json();
+            if (data.routes) {
+                return Math.round(data.routes[0].duration / 60);
+            }
+        }
+    } catch (e) {
+        console.error("Error de red, estimando por distancia física...");
+    }
+    return null; 
+}
+
+async function iniciarRuta() {
+    const ori = document.getElementById('origen').value.trim();
+    const dest = document.getElementById('destino').value.trim();
+
+    if (!ori || !dest) return alert("Falta origen o destino");
+
+    const btn = event.target;
+    btn.innerText = "BUSCANDO MAPA...";
+    btn.disabled = true;
+
+    // CONSULTA REAL AL MAPA
+    const minutos = await obtenerDatosRuta(ori, dest);
+
+    if (!minutos) {
+        alert("Error al conectar con el mapa. Comprueba tu conexión.");
+        btn.innerText = "TRAZAR RUTA";
+        btn.disabled = false;
         return;
     }
 
-    // Cambiar pantallas
+    // Si llega aquí, es que el mapa ha respondido con un tiempo real
     document.getElementById('pantalla1').style.display = 'none';
     document.getElementById('pantalla2').style.display = 'block';
     document.getElementById('indicadorRuta').innerText = ori + " > " + dest;
 
-    // Calcular llegada (45 min fijos para no fallar ahora)
-    let ahora = new Date();
-    ahora.setMinutes(ahora.getMinutes() + 45);
-    let h = ahora.getHours();
-    let m = ahora.getMinutes();
+    let llegada = new Date();
+    llegada.setMinutes(llegada.getMinutes() + minutos);
+    
+    const h = llegada.getHours();
+    const m = llegada.getMinutes();
     document.getElementById('valLlegada').innerText = (h<10?'0':'')+h + ":" + (m<10?'0':'')+m;
+    
+    btn.innerText = "TRAZAR RUTA";
+    btn.disabled = false;
 }
 
-// 3. FINALIZAR (Para volver atrás)
 function finalizarViaje() {
     document.getElementById('pantalla2').style.display = 'none';
     document.getElementById('pantalla1').style.display = 'block';
-}
-
-// 4. CONECTAR (Básico)
-function conectarOBD() {
-    alert("Intentando conectar con vLinker...");
-    document.getElementById('dotConexion').style.backgroundColor = "#4ade80";
 }
