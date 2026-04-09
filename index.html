@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tracking Pro</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        #map { height: 250px; width: 100%; border-radius: 1rem; z-index: 1; }
+        #map { height: 250px; width: 100%; z-index: 10; background: #eee; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -24,28 +23,28 @@
     <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-4">
         <input type="text" id="origen" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Origen">
         <input type="text" id="destino" class="w-full p-4 bg-slate-50 dark:bg-slate-800 border dark:border-slate-700 rounded-xl" placeholder="Destino">
-        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 bg-blue-50 dark:bg-slate-800 border rounded-xl text-center font-bold" value="1.488">
-        <button onclick="iniciarRuta()" id="btnTrazar" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black text-lg">TRAZAR RUTA</button>
+        <input type="number" id="precioLitro" step="0.001" class="w-full p-4 border rounded-xl text-center font-bold" value="1.488">
+        <button onclick="iniciarRuta()" id="btnTrazar" class="w-full bg-blue-600 text-white p-5 rounded-xl font-black">TRAZAR RUTA</button>
     </div>
 
     <div id="pantalla2" class="hidden p-4 max-w-md mx-auto space-y-4">
         <div class="flex justify-between items-center">
-            <span class="text-xs font-bold">MAPA EN TIEMPO REAL</span>
-            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 uppercase">✕ Finalizar</button>
+            <span class="text-xs font-bold uppercase">Trayecto Real</span>
+            <button onclick="finalizarViaje()" class="text-xs font-bold text-red-500 uppercase">✕ Salir</button>
         </div>
 
         <div class="bg-slate-100 dark:bg-slate-800 rounded-3xl p-4 border dark:border-slate-700">
-            <div id="map"></div>
+            <div id="map" class="rounded-2xl"></div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4 text-center">
-            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700">
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 text-center">
                 <p class="text-[10px] uppercase font-bold opacity-50">Llegada</p>
                 <p id="valLlegada" class="text-3xl font-mono text-blue-600">--:--</p>
             </div>
-            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700">
+            <div class="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 text-center">
                 <p class="text-[10px] uppercase font-bold opacity-50">Velocidad</p>
-                <p class="text-3xl font-mono">0</p>
+                <p id="valVelocidad" class="text-3xl font-mono">0</p>
             </div>
         </div>
     </div>

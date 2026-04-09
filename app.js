@@ -2,9 +2,10 @@ let mapa = null;
 
 function toggleModo() {
     document.documentElement.classList.toggle('dark');
-    if(mapa) {
-        // Cambiar el estilo del mapa al cambiar modo (opcional)
-        finalizarViaje(); // Reiniciamos para refrescar tiles
+    // Al cambiar de modo, si el mapa existe, lo refrescamos
+    if (mapa) {
+        finalizarViaje();
+        alert("Modo cambiado, traza la ruta de nuevo.");
     }
 }
 
@@ -14,10 +15,11 @@ async function iniciarRuta() {
     if (!ori || !dest) return alert("Falta origen o destino");
 
     const btn = document.getElementById('btnTrazar');
-    btn.innerText = "CARGANDO MAPA...";
+    btn.innerText = "BUSCANDO RUTA...";
+    btn.disabled = true;
 
     try {
-        // 1. Geocodificación y Ruta
+        // 1. Obtener coordenadas
         const geo = async (l) => {
             const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(l)}`);
             const d = await r.json();
@@ -26,52 +28,63 @@ async function iniciarRuta() {
         const oData = await geo(ori);
         const dData = await geo(dest);
 
+        if(!oData || !dData) throw new Error("Localización no encontrada");
+
+        // 2. Obtener ruta
         const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${oData.lon},${oData.lat};${dData.lon},${dData.lat}?overview=full&geometries=geojson`);
         const data = await r.json();
 
-        // 2. Mostrar pantalla
+        // 3. Cambiar Pantalla
         document.getElementById('pantalla1').classList.add('hidden');
         document.getElementById('pantalla2').classList.remove('hidden');
 
-        // 3. Inicializar Mapa (Con retardo para que el div sea visible)
+        // 4. INICIALIZAR MAPA (Con triple seguridad)
         setTimeout(() => {
-            if (mapa) { mapa.remove(); }
+            if (mapa) { mapa.remove(); mapa = null; }
             
-            mapa = L.map('map').setView([oData.lat, oData.lon], 13);
+            // Creamos el mapa apuntando al div 'map'
+            mapa = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([oData.lat, oData.lon], 13);
             
             const isDark = document.documentElement.classList.contains('dark');
             const tiles = isDark 
                 ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
                 : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-            L.tileLayer(tiles, {
-                attribution: '&copy; OpenStreetMap'
-            }).addTo(mapa);
+            L.tileLayer(tiles).addTo(mapa);
 
             const coords = data.routes[0].geometry.coordinates.map(p => [p[1], p[0]]);
-            const polyline = L.polyline(coords, { color: '#2563eb', weight: 6 }).addTo(mapa);
+            const polyline = L.polyline(coords, { color: '#2563eb', weight: 6, opacity: 0.8 }).addTo(mapa);
             
+            // Ajustar vista
             mapa.fitBounds(polyline.getBounds(), { padding: [30, 30] });
-            
-            // CRÍTICO PARA IPHONE: Forza el redibujado
+
+            // Forzar renderizado
             mapa.invalidateSize();
 
-            // Hora llegada
+            // Tiempo de llegada
             let llegada = new Date();
             llegada.setMinutes(llegada.getMinutes() + Math.round(data.routes[0].duration / 60));
             document.getElementById('valLlegada').innerText = llegada.getHours() + ":" + (llegada.getMinutes()<10?'0':'') + llegada.getMinutes();
             
             btn.innerText = "TRAZAR RUTA";
-        }, 500);
+            btn.disabled = false;
+        }, 400);
 
     } catch (e) {
-        alert("Error de conexión");
+        alert("Error: " + e.message);
         btn.innerText = "TRAZAR RUTA";
+        btn.disabled = false;
     }
 }
 
 function finalizarViaje() {
+    if (mapa) {
+        mapa.remove();
+        mapa = null;
+    }
     document.getElementById('pantalla2').classList.add('hidden');
     document.getElementById('pantalla1').classList.remove('hidden');
-    if(mapa) { mapa.remove(); mapa = null; }
 }
