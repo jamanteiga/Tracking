@@ -1,12 +1,5 @@
-const CACHE_NAME = 'octavia-v20';
-const assets = [
-  './',
-  './index.html',
-  './app.js',
-  './manifest.json',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-];
+const CACHE_NAME = 'octavia-v22';
+const assets = ['./', './index.html', './app.js', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(assets)));
@@ -14,9 +7,7 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(
-    ks.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-  )));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 

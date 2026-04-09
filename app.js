@@ -1,127 +1,111 @@
 let mapa = null;
-let obdConectado = false;
 let grabacionActiva = false;
 let datosCSV = [];
-let watchID = null;
+let intervalo1s = null;
+let intervalo10s = null;
 
-// Estados Globales
+// Variables de Telemetría
 let curLat = 0, curLon = 0, curAlt = 0, curVel = 0;
-let acumuladoVel = 0, muestras = 0;
-
-function toggleModo() {
-    document.documentElement.classList.toggle('dark');
-}
-
-async function conectarOBD() {
-    try {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ namePrefix: 'vLinker' }],
-            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-        });
-        obdConectado = true;
-        document.getElementById('dotConexion').classList.replace('bg-red-500', 'bg-green-400');
-    } catch (e) { console.log("BT: " + e); }
-}
+let distTotalKm = 0; // Para calcular consumo y coste
+let sumaVel10s = 0, cuentaVel10s = 0;
+let sumaVelTotal = 0, cuentaVelTotal = 0;
+let precioCombustible = 1.65;
+const CONSUMO_BASE = 5.8; // l/100km (ajusta al consumo real de tu Octavia)
 
 async function iniciarRuta() {
-    const ori = document.getElementById('origen').value.trim();
-    const dest = document.getElementById('destino').value.trim();
-    if (!ori || !dest) return alert("Indica la ruta");
-
-    const btn = document.getElementById('btnTrazar');
-    btn.innerText = "LOCALIZANDO...";
-    btn.disabled = true;
+    const ori = document.getElementById('origen').value;
+    const dest = document.getElementById('destino').value;
+    precioCombustible = parseFloat(document.getElementById('precioLitro').value) || 1.65;
 
     try {
-        const geo = async (q) => {
-            const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}`);
-            const d = await r.json(); return d[0];
-        };
-        const oData = await geo(ori);
-        const dData = await geo(dest);
-
-        const rRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${oData.lon},${oData.lat};${dData.lon},${dData.lat}?overview=full&geometries=geojson`);
-        const rData = await rRes.json();
+        const resOri = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${ori}`);
+        const dOri = await resOri.json();
+        const resDest = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${dest}`);
+        const dDest = await resDest.json();
 
         document.getElementById('pantalla1').classList.add('hidden');
         document.getElementById('pantalla2').classList.remove('hidden');
 
-        // INICIALIZACIÓN DE MAPA CON RETRESO
+        // REPARACIÓN MAPA: Usar OpenStreetMap estándar (evita fondos negros)
         setTimeout(() => {
-            if (mapa) mapa.remove();
-            mapa = L.map('map', { zoomControl: false, attributionControl: false }).setView([oData.lat, oData.lon], 13);
+            if (mapa) { mapa.remove(); mapa = null; }
+            mapa = L.map('map', { zoomControl: false }).setView([dOri[0].lat, dOri[0].lon], 13);
             
-            const isDark = document.documentElement.classList.contains('dark');
-            const tiles = isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-            
-            L.tileLayer(tiles).addTo(mapa);
-            const coords = rData.routes[0].geometry.coordinates.map(p => [p[1], p[0]]);
-            const poly = L.polyline(coords, { color: '#3b82f6', weight: 8, opacity: 0.8 }).addTo(mapa);
-            mapa.fitBounds(poly.getBounds(), { padding: [20, 20] });
-            
-            // Forzar redibujado cada vez que el mapa sea visible
-            mapa.invalidateSize();
-            
-            let llegada = new Date();
-            llegada.setMinutes(llegada.getMinutes() + Math.round(rData.routes[0].duration / 60));
-            document.getElementById('valLlegada').innerText = llegada.getHours() + ":" + (llegada.getMinutes()<10?'0':'') + llegada.getMinutes();
-        }, 300);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19
+            }).addTo(mapa);
 
-        // GPS Real del iPhone
-        watchID = navigator.geolocation.watchPosition(p => {
+            L.marker([dOri[0].lat, dOri[0].lon]).addTo(mapa).bindPopup('Origen');
+            L.marker([dDest[0].lat, dDest[0].lon]).addTo(mapa).bindPopup('Destino');
+            
+            // Forzar actualización de tamaño para evitar cuadros negros
+            mapa.invalidateSize();
+        }, 500);
+
+        // GPS Activo
+        navigator.geolocation.watchPosition(p => {
             curLat = p.coords.latitude;
             curLon = p.coords.longitude;
             curAlt = p.coords.altitude || 0;
-            if (!obdConectado) curVel = Math.round(p.coords.speed * 3.6) || 0;
-
+            curVel = Math.round(p.coords.speed * 3.6) || 0;
+            
             document.getElementById('valVelocidad').innerText = curVel;
             document.getElementById('valAltitud').innerText = Math.round(curAlt);
+        }, null, { enableHighAccuracy: true });
 
-            if (grabacionActiva) {
-                muestras++;
-                acumuladoVel += curVel;
-                datosCSV.push([new Date().toISOString(), curLat.toFixed(6), curLon.toFixed(6), curAlt.toFixed(1), curVel, (acumuladoVel/muestras).toFixed(1)]);
+        // Lógica de Media cada 10 segundos
+        intervalo10s = setInterval(() => {
+            if (cuentaVel10s > 0) {
+                let media10 = Math.round(sumaVel10s / cuentaVel10s);
+                document.getElementById('valMedia10s').innerText = media10;
+                sumaVel10s = 0; cuentaVel10s = 0;
             }
-        }, e => console.log(e), { enableHighAccuracy: true });
+        }, 10000);
 
-    } catch (e) { alert("Error de conexión"); }
-    btn.innerText = "TRAZAR E INICIAR";
-    btn.disabled = false;
+    } catch (e) { alert("Error al localizar puntos"); }
 }
 
 function alternarGrabacion() {
     const btn = document.getElementById('btnStartRec');
-    const dot = document.getElementById('dotRec');
-    const label = document.getElementById('labelRec');
-
     if (!grabacionActiva) {
-        datosCSV = [["Timestamp", "Lat", "Lon", "Altitud_m", "Vel_KmH", "Vel_Media"]];
         grabacionActiva = true;
-        btn.innerText = "PARAR Y ENVIAR";
-        dot.classList.replace('bg-slate-400', 'bg-red-500');
-        dot.classList.add('animate-rec');
-        label.innerText = "REC ACTIVO";
-        label.classList.add('text-red-500');
+        datosCSV = [["Timestamp", "Lat", "Lon", "Velocidad", "Altitud"]];
+        btn.innerText = "DETENER Y EXPORTAR";
+        btn.classList.replace('bg-red-600', 'bg-slate-800');
+        
+        // Registro cada 1 segundo
+        intervalo1s = setInterval(() => {
+            // Acumular para la media de 10s
+            sumaVel10s += curVel;
+            cuentaVel10s++;
+            
+            // Acumular para cálculos de distancia/coste
+            // 1 km/h durante 1 seg = 0.0002777 km
+            let distTramo = (curVel / 3600);
+            distTotalKm += distTramo;
+
+            // Cálculos dinámicos
+            let litrosGastados = (distTotalKm * CONSUMO_BASE) / 100;
+            let costeActual = litrosGastados * precioCombustible;
+
+            document.getElementById('valDinero').innerText = costeActual.toFixed(2);
+            document.getElementById('valConsumo').innerText = CONSUMO_BASE.toFixed(1);
+
+            datosCSV.push([new Date().toISOString(), curLat, curLon, curVel, curAlt]);
+        }, 1000);
     } else {
         grabacionActiva = false;
+        clearInterval(intervalo1s);
         exportarCSV();
-        btn.innerText = "Iniciar REC";
-        dot.classList.remove('bg-red-500', 'animate-rec');
-        dot.classList.add('bg-slate-400');
-        label.innerText = "Datalogger Ready";
-        label.classList.remove('text-red-500');
+        location.reload();
     }
 }
 
 async function exportarCSV() {
-    if (datosCSV.length < 2) return;
-    let csv = datosCSV.map(e => e.join(",")).join("\n");
-    let blob = new Blob([csv], { type: 'text/csv' });
-    let file = new File([blob], `SkodaLog_${Date.now()}.csv`, { type: 'text/csv' });
-    if (navigator.share) await navigator.share({ files: [file], title: 'Telemetría Octavia' });
+    let csvContent = datosCSV.map(e => e.join(",")).join("\n");
+    let blob = new Blob([csvContent], { type: 'text/csv' });
+    let file = new File([blob], `Viaje_Octavia_${Date.now()}.csv`, { type: 'text/csv' });
+    if (navigator.share) await navigator.share({ files: [file], title: 'Log de Viaje' });
 }
 
-function finalizarViaje() {
-    if (watchID) navigator.geolocation.clearWatch(watchID);
-    location.reload();
-}
+function finalizarViaje() { location.reload(); }

@@ -3,80 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Octavia Telemetry PRO</title>
+    <title>Octavia Telemetry V22</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
     <style>
-        #map { 
-            height: 300px !important; 
-            width: 100% !important; 
-            border-radius: 1rem; 
-            background: #27272a; 
-            border: 2px solid #3f3f46;
-        }
+        #map { height: 350px !important; width: 100%; border-radius: 1.5rem; background: #eee; border: 2px solid #ddd; z-index: 10; }
+        .dashboard-val { font-family: monospace; font-weight: 800; }
         .hidden { display: none !important; }
-        .dashboard-val { font-family: ui-monospace, monospace; font-weight: 800; }
-        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .animate-rec { animation: pulse-red 1s infinite; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white min-h-screen transition-colors duration-500">
+<body class="bg-slate-100 text-slate-900 min-h-screen">
     
-    <header class="p-4 flex justify-between items-center bg-white dark:bg-slate-900 border-b dark:border-slate-800 shadow-sm">
-        <h1 class="font-black text-xl tracking-tighter italic text-blue-600 dark:text-blue-400">OCTAVIA LOG</h1>
-        <button onclick="toggleModo()" id="btnModo" class="p-2 bg-slate-100 dark:bg-slate-800 rounded-xl border dark:border-slate-700">🌙</button>
-    </header>
-
     <div id="pantalla1" class="p-6 max-w-md mx-auto space-y-4">
-        <div class="space-y-2">
-            <label class="text-[10px] font-bold uppercase opacity-60 ml-2">Ruta de Viaje</label>
-            <input type="text" id="origen" class="w-full p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl shadow-sm" placeholder="Origen">
-            <input type="text" id="destino" class="w-full p-4 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-2xl shadow-sm" placeholder="Destino">
+        <h1 class="text-2xl font-black italic text-blue-700">CONFIGURACIÓN VIAJE</h1>
+        <input type="text" id="origen" class="w-full p-4 border rounded-2xl" placeholder="Origen (ej: Madrid)">
+        <input type="text" id="destino" class="w-full p-4 border rounded-2xl" placeholder="Destino (ej: Valencia)">
+        
+        <div class="bg-white p-4 rounded-2xl border">
+            <label class="block text-[10px] font-bold uppercase mb-2">Precio Combustible (€/L)</label>
+            <input type="number" id="precioLitro" step="0.01" value="1.65" class="w-full p-2 bg-slate-50 rounded-lg border">
         </div>
 
-        <button onclick="conectarOBD()" id="btnConectar" class="w-full bg-slate-900 dark:bg-slate-100 dark:text-slate-900 text-white p-4 rounded-2xl font-bold flex justify-between items-center shadow-lg active:scale-95 transition-all">
-            <span>VLINKER OBD2</span>
-            <div id="dotConexion" class="h-3 w-3 bg-red-500 rounded-full border-2 border-white dark:border-slate-900"></div>
-        </button>
-        
-        <button onclick="iniciarRuta()" id="btnTrazar" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-lg shadow-xl hover:bg-blue-700 transition-colors">
-            TRAZAR E INICIAR
-        </button>
+        <button onclick="iniciarRuta()" class="w-full bg-blue-600 text-white p-5 rounded-2xl font-black text-xl shadow-lg">INICIAR TELEMETRÍA</button>
     </div>
 
     <div id="pantalla2" class="hidden p-4 max-w-md mx-auto space-y-4">
-        <div class="flex justify-between items-center bg-white dark:bg-slate-900 p-3 rounded-2xl border dark:border-slate-800 shadow-sm">
-            <div class="flex items-center gap-3">
-                <div id="dotRec" class="h-3 w-3 bg-slate-400 rounded-full"></div>
-                <span id="labelRec" class="text-[10px] font-black uppercase tracking-widest opacity-50">Datalogger Ready</span>
-            </div>
-            <button id="btnStartRec" onclick="alternarGrabacion()" class="bg-red-600 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase shadow-md active:scale-90 transition-all">Iniciar REC</button>
-        </div>
+        <div id="map"></div>
 
-        <div class="relative">
-            <div id="map"></div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border dark:border-slate-800 shadow-sm text-center">
-                <p class="text-[10px] font-bold opacity-40 uppercase mb-1">Altitud</p>
-                <p class="text-3xl dashboard-val"><span id="valAltitud">0</span><span class="text-sm ml-1 opacity-50">m</span></p>
-            </div>
-            <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl border dark:border-slate-800 shadow-sm text-center">
-                <p class="text-[10px] font-bold opacity-40 uppercase mb-1">Llegada</p>
-                <p id="valLlegada" class="text-3xl dashboard-val text-blue-600">--:--</p>
-            </div>
-            <div class="col-span-2 bg-slate-900 dark:bg-blue-600 p-6 rounded-[2.5rem] text-white flex justify-between items-center shadow-2xl overflow-hidden relative">
-                <div class="relative z-10">
-                    <p class="text-[10px] opacity-60 uppercase font-black mb-1">Velocidad Real</p>
-                    <p class="text-6xl dashboard-val tracking-tighter"><span id="valVelocidad">0</span><span class="text-xl ml-2 opacity-50 font-light italic">km/h</span></p>
+        <div class="grid grid-cols-2 gap-3">
+            <div class="col-span-2 bg-blue-600 p-6 rounded-[2rem] text-white flex justify-between items-center shadow-xl">
+                <div>
+                    <p class="text-[10px] uppercase font-bold opacity-80">Velocidad Real</p>
+                    <p class="text-6xl dashboard-val"><span id="valVelocidad">0</span><span class="text-xl ml-1">km/h</span></p>
                 </div>
-                <button onclick="finalizarViaje()" class="relative z-10 bg-white/20 p-5 rounded-full text-white font-bold backdrop-blur-md active:scale-90 transition-all">SALIR</button>
+                <button onclick="finalizarViaje()" class="bg-white/20 p-4 rounded-full font-bold">SALIR</button>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                <p class="text-[10px] font-bold opacity-50 uppercase">V. Media (10s)</p>
+                <p class="text-2xl dashboard-val text-orange-600"><span id="valMedia10s">0</span> <span class="text-xs">km/h</span></p>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                <p class="text-[10px] font-bold opacity-50 uppercase">Altitud</p>
+                <p class="text-2xl dashboard-val"><span id="valAltitud">0</span> <span class="text-xs">m</span></p>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                <p class="text-[10px] font-bold opacity-50 uppercase">Consumo Med.</p>
+                <p class="text-2xl dashboard-val text-green-700"><span id="valConsumo">5.5</span> <span class="text-xs">l/100</span></p>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border shadow-sm text-center">
+                <p class="text-[10px] font-bold opacity-50 uppercase">Coste Trayecto</p>
+                <p class="text-2xl dashboard-val text-blue-700"><span id="valDinero">0.00</span> <span class="text-xs">€</span></p>
             </div>
         </div>
+
+        <button id="btnStartRec" onclick="alternarGrabacion()" class="w-full bg-red-600 text-white p-4 rounded-2xl font-bold uppercase tracking-widest">INICIAR GRABACIÓN 1s</button>
+        <p id="labelRec" class="text-center text-[10px] font-bold opacity-40 italic">ESPERANDO...</p>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
