@@ -1,9 +1,8 @@
-const CACHE_NAME = 'tracking-v13';
+const CACHE_NAME = 'tracking-v14';
 const assets = [
   './',
   './index.html',
   './app.js',
-  './manifest.json',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];

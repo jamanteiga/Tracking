@@ -1,15 +1,23 @@
 let mapa = null;
-let minutosEstimados = 0;
 
 function toggleModo() {
     document.documentElement.classList.toggle('dark');
-    const btn = document.getElementById('btnModo');
-    btn.innerText = document.documentElement.classList.contains('dark') ? "☀️" : "🌙";
-    // Si el mapa existe, habría que recargar las teselas (opcional)
+    if(mapa) {
+        // Cambiar el estilo del mapa al cambiar modo (opcional)
+        finalizarViaje(); // Reiniciamos para refrescar tiles
+    }
 }
 
-async function obtenerRutaOSRM(ori, dest) {
+async function iniciarRuta() {
+    const ori = document.getElementById('origen').value.trim();
+    const dest = document.getElementById('destino').value.trim();
+    if (!ori || !dest) return alert("Falta origen o destino");
+
+    const btn = document.getElementById('btnTrazar');
+    btn.innerText = "CARGANDO MAPA...";
+
     try {
+        // 1. Geocodificación y Ruta
         const geo = async (l) => {
             const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(l)}`);
             const d = await r.json();
@@ -18,77 +26,52 @@ async function obtenerRutaOSRM(ori, dest) {
         const oData = await geo(ori);
         const dData = await geo(dest);
 
-        if (oData && dData) {
-            const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${oData.lon},${oData.lat};${dData.lon},${dData.lat}?overview=full&geometries=geojson`);
-            const data = await r.json();
-            return {
-                minutos: Math.round(data.routes[0].duration / 60),
-                coords: data.routes[0].geometry.coordinates,
-                oLat: oData.lat, oLon: oData.lon,
-                dLat: dData.lat, dLon: dData.lon
-            };
-        }
-    } catch (e) { console.error(e); }
-    return null;
-}
+        const r = await fetch(`https://router.project-osrm.org/route/v1/driving/${oData.lon},${oData.lat};${dData.lon},${dData.lat}?overview=full&geometries=geojson`);
+        const data = await r.json();
 
-async function iniciarRuta() {
-    const ori = document.getElementById('origen').value.trim();
-    const dest = document.getElementById('destino').value.trim();
-    const btn = document.getElementById('btnTrazar');
+        // 2. Mostrar pantalla
+        document.getElementById('pantalla1').classList.add('hidden');
+        document.getElementById('pantalla2').classList.remove('hidden');
 
-    if (!ori || !dest) return alert("Introduce origen y destino");
-
-    btn.innerText = "BUSCANDO RUTA...";
-    btn.disabled = true;
-
-    const datos = await obtenerRutaOSRM(ori, dest);
-
-    if (!datos) {
-        alert("No se pudo obtener la ruta real.");
-        btn.innerText = "TRAZAR RUTA";
-        btn.disabled = false;
-        return;
-    }
-
-    minutosEstimados = datos.minutos;
-    document.getElementById('indicadorRuta').innerText = ori + " ➔ " + dest;
-    document.getElementById('pantalla1').classList.add('hidden');
-    document.getElementById('pantalla2').classList.remove('hidden');
-
-    // Actualizar Hora de Llegada
-    let llegada = new Date();
-    llegada.setMinutes(llegada.getMinutes() + minutosEstimados);
-    const h = llegada.getHours();
-    const m = llegada.getMinutes();
-    document.getElementById('valLlegada').innerText = (h<10?'0':'')+h + ":" + (m<10?'0':'')+m;
-
-    // Inicializar Mapa
-    setTimeout(() => {
-        if (mapa) mapa.remove();
-        mapa = L.map('map', { zoomControl: false }).setView([datos.oLat, datos.oLon], 12);
-        
-        const isDark = document.documentElement.classList.contains('dark');
-        const tiles = isDark 
-            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-            : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        // 3. Inicializar Mapa (Con retardo para que el div sea visible)
+        setTimeout(() => {
+            if (mapa) { mapa.remove(); }
             
-        L.tileLayer(tiles).addTo(mapa);
+            mapa = L.map('map').setView([oData.lat, oData.lon], 13);
+            
+            const isDark = document.documentElement.classList.contains('dark');
+            const tiles = isDark 
+                ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
-        const puntos = datos.coords.map(p => [p[1], p[0]]);
-        const polyline = L.polyline(puntos, { color: '#2563eb', weight: 5 }).addTo(mapa);
-        mapa.fitBounds(polyline.getBounds(), { padding: [20, 20] });
-    }, 300);
+            L.tileLayer(tiles, {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(mapa);
 
-    btn.innerText = "TRAZAR RUTA";
-    btn.disabled = false;
+            const coords = data.routes[0].geometry.coordinates.map(p => [p[1], p[0]]);
+            const polyline = L.polyline(coords, { color: '#2563eb', weight: 6 }).addTo(mapa);
+            
+            mapa.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+            
+            // CRÍTICO PARA IPHONE: Forza el redibujado
+            mapa.invalidateSize();
+
+            // Hora llegada
+            let llegada = new Date();
+            llegada.setMinutes(llegada.getMinutes() + Math.round(data.routes[0].duration / 60));
+            document.getElementById('valLlegada').innerText = llegada.getHours() + ":" + (llegada.getMinutes()<10?'0':'') + llegada.getMinutes();
+            
+            btn.innerText = "TRAZAR RUTA";
+        }, 500);
+
+    } catch (e) {
+        alert("Error de conexión");
+        btn.innerText = "TRAZAR RUTA";
+    }
 }
 
 function finalizarViaje() {
     document.getElementById('pantalla2').classList.add('hidden');
     document.getElementById('pantalla1').classList.remove('hidden');
-}
-
-function conectarOBD() {
-    alert("Buscando vLinker...");
+    if(mapa) { mapa.remove(); mapa = null; }
 }
